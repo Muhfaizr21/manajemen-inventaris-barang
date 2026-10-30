@@ -220,9 +220,7 @@ Seluruh file dokumentasi API tersedia di folder [`backend/docs/`](./backend/docs
 
 ## 💻 5. Panduan Instalasi & Menjalankan Secara Lokal
 
-### Prasyarat
-- **Golang** `1.21` atau versi lebih baru
-- **PostgreSQL** `13+` berjalan di mesin lokal
+Tersedia dua cara menjalankan: **Docker Compose** (direkomendasikan, tanpa install Go/PostgreSQL manual) atau **Manual** (Go + PostgreSQL lokal).
 
 ### Langkah 1: Clone Repository
 ```bash
@@ -230,13 +228,47 @@ git clone https://github.com/Muhfaizr21/manajemen-inventaris-barang.git
 cd manajemen-inventaris-barang
 ```
 
-### Langkah 2: Buat Database PostgreSQL
+### Opsi A: Jalankan dengan Docker Compose
+
+**Prasyarat:** [Docker Desktop](https://www.docker.com/products/docker-desktop/) / Docker Engine + Compose.
+
+```bash
+docker compose up -d --build
+```
+
+Perintah ini otomatis:
+1. Membangun image backend dari [`backend/Dockerfile`](./backend/Dockerfile) (multi-stage build Go → Alpine).
+2. Menjalankan container **PostgreSQL 16** dengan healthcheck dan persistent volume `pgdata`.
+3. Menjalankan container **API** yang menunggu database *healthy* sebelum start.
+4. GORM melakukan **Auto-Migrate** tabel `users` dan `items` (termasuk constraint `CHECK (stock >= 0)`).
+
+Server siap diakses pada `http://localhost:8080`.
+
+**Perintah berguna:**
+```bash
+docker compose logs -f api      # Lihat log backend
+docker compose down             # Stop & hapus container (data DB tetap di volume)
+docker compose down -v --remove-orphans   # Stop + HAPUS volume database
+```
+
+**Override konfigurasi (opsional):**
+```bash
+DB_USER=postgres DB_PASS=rahasia JWT_SECRET=custom-secret-prod docker compose up -d --build
+```
+
+### Opsi B: Jalankan Manual (Tanpa Docker)
+
+**Prasyarat**
+- **Golang** `1.21` atau versi lebih baru
+- **PostgreSQL** `13+` berjalan di mesin lokal
+
+**Langkah 2: Buat Database PostgreSQL**
 Pastikan PostgreSQL sudah aktif, lalu buat database bernama `tes_backend`:
 ```sql
 CREATE DATABASE tes_backend;
 ```
 
-### Langkah 3: Konfigurasi Environment Variable
+**Langkah 3: Konfigurasi Environment Variable**
 Aplikasi memiliki nilai konfigurasi bawaan (*default fallback*) yang siap jalan sebagaimana tercantum pada [`backend/.env.example`](./backend/.env.example):
 
 | Variabel | Nilai Default | Deskripsi |
@@ -257,7 +289,7 @@ export DB_PASS=password_anda
 export DB_NAME=tes_backend
 ```
 
-### Langkah 4: Jalankan Aplikasi
+**Langkah 4: Jalankan Aplikasi**
 ```bash
 cd backend
 go mod tidy
