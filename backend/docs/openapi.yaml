@@ -1,0 +1,200 @@
+openapi: 3.0.3
+info:
+  title: Sistem Manajemen Inventaris Barang API
+  version: 1.0.0
+  description: RESTful API Sistem Manajemen Inventaris Barang menggunakan Golang (Gin + GORM + PostgreSQL) dengan arsitektur Layered MVC & prinsip SOLID.
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          example: Muhammad Faiz
+        email:
+          type: string
+          format: email
+          example: faiz@example.com
+        password:
+          type: string
+          minLength: 6
+          example: rahasia123
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: faiz@example.com
+        password:
+          type: string
+          example: rahasia123
+    ItemPayload:
+      type: object
+      required: [name, stock, price]
+      properties:
+        name:
+          type: string
+          example: MacBook Pro M3 14 Inch
+        description:
+          type: string
+          example: Laptop operasional tim engineering
+        stock:
+          type: integer
+          minimum: 0
+          example: 15
+        price:
+          type: number
+          minimum: 0
+          example: 28500000
+paths:
+  /register:
+    post:
+      tags: [Authentication]
+      summary: Registrasi pengguna baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registrasi berhasil
+        '400':
+          description: Validasi input gagal
+        '409':
+          description: Email sudah terdaftar
+  /login:
+    post:
+      tags: [Authentication]
+      summary: Login pengguna dan dapatkan token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login berhasil dan mengembalikan token JWT
+        '401':
+          description: Kredensial tidak valid
+  /items:
+    post:
+      tags: [Items]
+      summary: Tambah barang baru
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemPayload'
+      responses:
+        '201':
+          description: Barang berhasil ditambahkan
+        '400':
+          description: Validasi gagal (misal stok bernilai negatif)
+        '401':
+          description: Tidak terautentikasi (JWT tidak valid/kosong)
+    get:
+      tags: [Items]
+      summary: Ambil daftar barang dengan fitur search dan pagination
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Kata kunci pencarian nama atau deskripsi barang
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Nomor halaman
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+          description: Jumlah item per halaman
+      responses:
+        '200':
+          description: Daftar barang beserta metadata paginasi
+        '401':
+          description: Tidak terautentikasi
+  /items/{id}:
+    get:
+      tags: [Items]
+      summary: Ambil detail barang berdasarkan ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detail barang ditemukan
+        '404':
+          description: Barang tidak ditemukan
+    put:
+      tags: [Items]
+      summary: Edit data barang berdasarkan ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemPayload'
+      responses:
+        '200':
+          description: Barang berhasil diperbarui
+        '400':
+          description: Validasi gagal (misal stok negatif)
+        '404':
+          description: Barang tidak ditemukan
+    delete:
+      tags: [Items]
+      summary: Hapus barang berdasarkan ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Barang berhasil dihapus
+        '404':
+          description: Barang tidak ditemukan
+
